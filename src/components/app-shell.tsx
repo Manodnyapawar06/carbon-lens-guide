@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { Leaf, Home, PlusCircle, User, LogOut } from "lucide-react";
+import { Leaf, Home, PlusCircle, User, LogOut, Sparkles, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -18,7 +18,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const tabs = [
     { to: "/dashboard", icon: Home, label: "Home" },
+    { to: "/insights", icon: Sparkles, label: "Insights" },
     { to: "/log", icon: PlusCircle, label: "Log" },
+    { to: "/trends", icon: TrendingUp, label: "Trends" },
     { to: "/profile", icon: User, label: "Profile" },
   ] as const;
 
@@ -39,19 +41,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="flex-1 px-5 pb-28 pt-4">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-2xl border-t bg-background/95 backdrop-blur">
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-5">
           {tabs.map((t) => {
             const active = pathname === t.to;
             const Icon = t.icon;
+            const isLog = t.to === "/log";
             return (
               <Link
                 key={t.to}
                 to={t.to}
-                className={`flex flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition ${
+                className={`flex flex-col items-center justify-center gap-1 py-3 text-[11px] font-medium transition ${
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? "scale-110" : ""}`} />
+                <Icon className={`h-5 w-5 transition ${active ? "scale-110" : ""} ${isLog && !active ? "text-primary" : ""}`} />
                 {t.label}
               </Link>
             );
