@@ -14,7 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          activity_key: string | null
+          category: string
+          co2_kg: number
+          created_at: string
+          description: string
+          id: string
+          logged_at: string
+          quantity: number
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_key?: string | null
+          category: string
+          co2_kg: number
+          created_at?: string
+          description: string
+          id?: string
+          logged_at?: string
+          quantity?: number
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_key?: string | null
+          category?: string
+          co2_kg?: number
+          created_at?: string
+          description?: string
+          id?: string
+          logged_at?: string
+          quantity?: number
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          diet: string | null
+          display_name: string | null
+          email: string | null
+          energy: string | null
+          flight_frequency: string | null
+          id: string
+          location: string | null
+          monthly_goal_kg: number | null
+          onboarded: boolean
+          transport: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          diet?: string | null
+          display_name?: string | null
+          email?: string | null
+          energy?: string | null
+          flight_frequency?: string | null
+          id: string
+          location?: string | null
+          monthly_goal_kg?: number | null
+          onboarded?: boolean
+          transport?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          diet?: string | null
+          display_name?: string | null
+          email?: string | null
+          energy?: string | null
+          flight_frequency?: string | null
+          id?: string
+          location?: string | null
+          monthly_goal_kg?: number | null
+          onboarded?: boolean
+          transport?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
