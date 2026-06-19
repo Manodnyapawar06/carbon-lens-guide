@@ -65,6 +65,19 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   }
 
+  async function handleReset() {
+    if (!email) {
+      toast.error("Enter your email above first");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Password reset email sent. Check your inbox.");
+  }
+
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex max-w-md flex-col px-6 py-10">
@@ -112,6 +125,16 @@ function AuthPage() {
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>
+
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="mt-3 w-full text-center text-sm text-primary hover:underline"
+            >
+              Forgot password?
+            </button>
+          )}
 
           <button
             type="button"
