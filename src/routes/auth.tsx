@@ -65,6 +65,19 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   }
 
+  async function handleReset() {
+    if (!email) {
+      toast.error("Enter your email above first");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Password reset email sent. Check your inbox.");
+  }
+
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex max-w-md flex-col px-6 py-10">
