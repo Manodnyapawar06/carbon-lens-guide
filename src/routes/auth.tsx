@@ -113,6 +113,16 @@ function AuthPage() {
             </Button>
           </form>
 
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="mt-3 w-full text-center text-sm text-primary hover:underline"
+            >
+              Forgot password?
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
