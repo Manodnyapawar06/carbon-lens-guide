@@ -1,17 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { CATEGORY_META, AVG_INDIAN_MONTHLY, AVG_GLOBAL_MONTHLY, type Category } from "@/lib/emissions";
 import { sustainabilityScore, scoreBand, topCategory, forecast, streaks, type Activity } from "@/lib/scoring";
+import { getAiInsights } from "@/lib/insights.functions";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { PlusCircle, TrendingDown, TrendingUp, Flame, Sparkles, Target, Trophy } from "lucide-react";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PlusCircle, TrendingDown, TrendingUp, Flame, Sparkles, Target, Trophy, Info, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell,
 } from "recharts";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — CarbonLens" }] }),
@@ -83,11 +87,33 @@ function Dashboard() {
   const { score } = useMemo(() => sustainabilityScore(profile ?? {}, totalMonth), [profile, totalMonth]);
   const band = scoreBand(score);
   const top = topCategory(activities);
-  const fc = forecast(activities, profile?.monthly_goal_kg);
   const st = streaks(activities);
   const goal = Number(profile?.monthly_goal_kg ?? 0);
-  const goalProgress = goal > 0 ? Math.min(100, (totalMonth / goal) * 100) : 0;
-  const goalOnTrack = goal > 0 ? fc.projected <= goal : false;
+
+  // Pull AI quick-win savings (cached) to feed the "improved projection"
+  const fetchInsights = useServerFn(getAiInsights);
+  const { data: ai } = useQuery({
+    queryKey: ["ai-insights"],
+    queryFn: () => fetchInsights(),
+    staleTime: 1000 * 60 * 30,
+    enabled: activities.length >= 3,
+  });
+  const potentialSavings = useMemo(
+    () => (ai?.quickWins ?? []).reduce((s, q) => s + (Number(q.savings_kg) || 0), 0),
+    [ai],
+  );
+
+  const fc = useMemo(
+    () => forecast(activities, profile?.monthly_goal_kg, potentialSavings),
+    [activities, profile?.monthly_goal_kg, potentialSavings],
+  );
+  const goalProgress = goal > 0 ? Math.min(100, (fc.current / goal) * 100) : 0;
+  const goalOnTrack = goal > 0 && !fc.insufficientData ? fc.projected <= goal : false;
+
+  // Visualization: cap bar widths relative to the max of goal/projection
+  const maxBar = Math.max(fc.goal, fc.projected, fc.improvedProjection, 1);
+  const barPct = (v: number) => Math.max(2, Math.round((v / maxBar) * 100));
+
 
   return (
     <AppShell>
@@ -164,17 +190,83 @@ function Dashboard() {
 
       {/* Forecast */}
       <section className="mt-6 rounded-2xl border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold"><Sparkles className="h-4 w-4 text-primary" /> Impact forecast</h2>
-        <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-          <Stat label="Current" value={fc.current} hint="kg this month" />
-          <Stat label="Projected" value={fc.projected} hint="kg by month end" />
-          <Stat label="Reduction" value={fc.reduction} hint="kg if you hit goal" highlight />
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <Sparkles className="h-4 w-4 text-primary" /> Impact forecast
+          </h2>
+          <TooltipProvider delayDuration={150}>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button className="rounded-full p-1 text-muted-foreground hover:text-foreground" aria-label="How this is calculated">
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[240px] text-xs">
+                Projection is calculated from your average daily emissions and current activity trends. Spikes are smoothed and the last 30 days are used when available.
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
         </div>
+
+        {fc.insufficientData ? (
+          <div className="mt-4 rounded-xl border border-dashed bg-muted/30 p-5 text-center">
+            <p className="text-sm font-medium">Not enough data yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Log a few more activities on different days to generate an accurate forecast.
+            </p>
+            <Link to="/log"><Button size="sm" className="mt-3 rounded-full">Log activity</Button></Link>
+          </div>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+              <Stat label="Current" value={fc.current} hint={`kg · day ${fc.dayOfMonth}/${fc.daysInMonth}`} />
+              <Stat label="Projected" value={fc.projected} hint="kg by month end" />
+              <Stat
+                label="Improved"
+                value={fc.improvedProjection}
+                hint={fc.potentialSavings > 0 ? `−${fc.potentialSavings} kg w/ tips` : "apply AI tips"}
+                highlight
+              />
+            </div>
+
+            {/* Goal comparison message */}
+            {fc.goal > 0 && (
+              <div className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-xs ${
+                fc.goalDiff >= 0 ? "bg-primary-soft text-accent-foreground" : "bg-destructive/10 text-destructive"
+              }`}>
+                {fc.goalDiff >= 0
+                  ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+                <span className="font-medium">
+                  {fc.goalDiff >= 0
+                    ? `You're on track to beat your goal by ${fc.goalDiff} kg CO₂.`
+                    : `At your current pace you'll exceed your goal by ${Math.abs(fc.goalDiff)} kg CO₂.`}
+                </span>
+              </div>
+            )}
+
+            {/* Visual comparison chart */}
+            <div className="mt-4 space-y-2.5">
+              {fc.goal > 0 && (
+                <BarRow label="Goal" value={fc.goal} pct={barPct(fc.goal)} color="var(--muted-foreground)" />
+              )}
+              <BarRow label="Projection" value={fc.projected} pct={barPct(fc.projected)}
+                color={fc.goal > 0 && fc.projected > fc.goal ? "var(--destructive)" : "var(--primary)"} />
+              <BarRow label="With AI tips" value={fc.improvedProjection} pct={barPct(fc.improvedProjection)}
+                color="var(--primary)" muted={fc.potentialSavings === 0} />
+            </div>
+
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Based on {fc.activeDays} active day{fc.activeDays === 1 ? "" : "s"} · avg {fc.dailyAvg} kg/day
+            </p>
+          </>
+        )}
       </section>
 
       {/* Top category + opportunity */}
       {top.value > 0 && (
         <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
           <div className="rounded-2xl border bg-card p-4">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <TrendingUp className="h-3.5 w-3.5" /> Top emission category
@@ -280,6 +372,21 @@ function Dashboard() {
     </AppShell>
   );
 }
+
+function BarRow({ label, value, pct, color, muted }: { label: string; value: number; pct: number; color: string; muted?: boolean }) {
+  return (
+    <div className={muted ? "opacity-60" : ""}>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-muted-foreground">{label}</span>
+        <span className="font-semibold tabular-nums">{value} kg</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
 
 function Stat({ label, value, hint, highlight }: { label: string; value: number; hint: string; highlight?: boolean }) {
   return (

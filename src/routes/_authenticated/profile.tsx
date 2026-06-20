@@ -147,22 +147,38 @@ function Profile() {
       {/* Achievements */}
       <section className="mt-6">
         <h2 className="mb-2 text-base font-semibold">Achievements</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <p className="mb-3 text-xs text-muted-foreground">{unlocked} of {ach.length} unlocked</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {ach.map((a) => (
             <div
               key={a.key}
-              className={`rounded-2xl border p-3 text-center transition ${
-                a.unlocked ? "bg-card" : "bg-muted/40 opacity-50"
+              className={`flex items-start gap-3 rounded-2xl border p-3 transition ${
+                a.unlocked ? "bg-card" : "bg-muted/40"
               }`}
-              title={a.description}
             >
-              <div className={`text-2xl ${a.unlocked ? "" : "grayscale"}`}>{a.icon}</div>
-              <div className="mt-1 text-[11px] font-semibold leading-tight">{a.label}</div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground leading-tight">{a.description}</div>
+              <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl text-2xl ${
+                a.unlocked ? "bg-primary-soft" : "bg-muted grayscale opacity-50"
+              }`}>{a.icon}</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-semibold">{a.label}</div>
+                  {a.unlocked && <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">Earned</span>}
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{a.description}</div>
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  <span className="font-medium">How:</span> {a.criteria}
+                </div>
+                {a.unlocked && a.earnedAt && (
+                  <div className="mt-0.5 text-[11px] text-primary">
+                    Earned {new Date(a.earnedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </section>
+
 
       {/* Editable profile */}
       <h2 className="mt-8 mb-2 text-base font-semibold">Your details</h2>
