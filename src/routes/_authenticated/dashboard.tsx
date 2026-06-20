@@ -1,17 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { CATEGORY_META, AVG_INDIAN_MONTHLY, AVG_GLOBAL_MONTHLY, type Category } from "@/lib/emissions";
 import { sustainabilityScore, scoreBand, topCategory, forecast, streaks, type Activity } from "@/lib/scoring";
+import { getAiInsights } from "@/lib/insights.functions";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { PlusCircle, TrendingDown, TrendingUp, Flame, Sparkles, Target, Trophy } from "lucide-react";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PlusCircle, TrendingDown, TrendingUp, Flame, Sparkles, Target, Trophy, Info, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell,
 } from "recharts";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — CarbonLens" }] }),
