@@ -373,6 +373,21 @@ function Dashboard() {
   );
 }
 
+function BarRow({ label, value, pct, color, muted }: { label: string; value: number; pct: number; color: string; muted?: boolean }) {
+  return (
+    <div className={muted ? "opacity-60" : ""}>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-muted-foreground">{label}</span>
+        <span className="font-semibold tabular-nums">{value} kg</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+
 function Stat({ label, value, hint, highlight }: { label: string; value: number; hint: string; highlight?: boolean }) {
   return (
     <div className={`rounded-xl p-3 ${highlight ? "bg-primary-soft" : "bg-muted/50"}`}>
