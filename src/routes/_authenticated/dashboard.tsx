@@ -190,17 +190,83 @@ function Dashboard() {
 
       {/* Forecast */}
       <section className="mt-6 rounded-2xl border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold"><Sparkles className="h-4 w-4 text-primary" /> Impact forecast</h2>
-        <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-          <Stat label="Current" value={fc.current} hint="kg this month" />
-          <Stat label="Projected" value={fc.projected} hint="kg by month end" />
-          <Stat label="Reduction" value={fc.reduction} hint="kg if you hit goal" highlight />
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <Sparkles className="h-4 w-4 text-primary" /> Impact forecast
+          </h2>
+          <TooltipProvider delayDuration={150}>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button className="rounded-full p-1 text-muted-foreground hover:text-foreground" aria-label="How this is calculated">
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[240px] text-xs">
+                Projection is calculated from your average daily emissions and current activity trends. Spikes are smoothed and the last 30 days are used when available.
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
         </div>
+
+        {fc.insufficientData ? (
+          <div className="mt-4 rounded-xl border border-dashed bg-muted/30 p-5 text-center">
+            <p className="text-sm font-medium">Not enough data yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Log a few more activities on different days to generate an accurate forecast.
+            </p>
+            <Link to="/log"><Button size="sm" className="mt-3 rounded-full">Log activity</Button></Link>
+          </div>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+              <Stat label="Current" value={fc.current} hint={`kg · day ${fc.dayOfMonth}/${fc.daysInMonth}`} />
+              <Stat label="Projected" value={fc.projected} hint="kg by month end" />
+              <Stat
+                label="Improved"
+                value={fc.improvedProjection}
+                hint={fc.potentialSavings > 0 ? `−${fc.potentialSavings} kg w/ tips` : "apply AI tips"}
+                highlight
+              />
+            </div>
+
+            {/* Goal comparison message */}
+            {fc.goal > 0 && (
+              <div className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-xs ${
+                fc.goalDiff >= 0 ? "bg-primary-soft text-accent-foreground" : "bg-destructive/10 text-destructive"
+              }`}>
+                {fc.goalDiff >= 0
+                  ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+                <span className="font-medium">
+                  {fc.goalDiff >= 0
+                    ? `You're on track to beat your goal by ${fc.goalDiff} kg CO₂.`
+                    : `At your current pace you'll exceed your goal by ${Math.abs(fc.goalDiff)} kg CO₂.`}
+                </span>
+              </div>
+            )}
+
+            {/* Visual comparison chart */}
+            <div className="mt-4 space-y-2.5">
+              {fc.goal > 0 && (
+                <BarRow label="Goal" value={fc.goal} pct={barPct(fc.goal)} color="var(--muted-foreground)" />
+              )}
+              <BarRow label="Projection" value={fc.projected} pct={barPct(fc.projected)}
+                color={fc.goal > 0 && fc.projected > fc.goal ? "var(--destructive)" : "var(--primary)"} />
+              <BarRow label="With AI tips" value={fc.improvedProjection} pct={barPct(fc.improvedProjection)}
+                color="var(--primary)" muted={fc.potentialSavings === 0} />
+            </div>
+
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Based on {fc.activeDays} active day{fc.activeDays === 1 ? "" : "s"} · avg {fc.dailyAvg} kg/day
+            </p>
+          </>
+        )}
       </section>
 
       {/* Top category + opportunity */}
       {top.value > 0 && (
         <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
           <div className="rounded-2xl border bg-card p-4">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <TrendingUp className="h-3.5 w-3.5" /> Top emission category
