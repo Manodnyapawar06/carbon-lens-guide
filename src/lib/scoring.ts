@@ -158,7 +158,31 @@ export function forecast(
 
 // Day streaks
 export function streaks(activities: Activity[]) {
-...
+  const days = new Set(activities.map((a) => a.logged_at));
+  let current = 0;
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (!days.has(toKey(d))) d.setDate(d.getDate() - 1);
+  while (days.has(toKey(d))) {
+    current++;
+    d.setDate(d.getDate() - 1);
+  }
+  const sortedDays = [...days].sort();
+  let longest = 0, run = 0;
+  let prev: Date | null = null;
+  for (const k of sortedDays) {
+    const cur = new Date(k);
+    if (prev && (cur.getTime() - prev.getTime()) === 86400000) run++;
+    else run = 1;
+    longest = Math.max(longest, run);
+    prev = cur;
+  }
+  return { current, longest, totalDays: days.size };
+}
+
+function toKey(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
 export type Achievement = {
   key: string;
   label: string;
