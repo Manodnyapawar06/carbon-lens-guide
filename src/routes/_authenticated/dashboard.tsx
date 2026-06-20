@@ -87,11 +87,33 @@ function Dashboard() {
   const { score } = useMemo(() => sustainabilityScore(profile ?? {}, totalMonth), [profile, totalMonth]);
   const band = scoreBand(score);
   const top = topCategory(activities);
-  const fc = forecast(activities, profile?.monthly_goal_kg);
   const st = streaks(activities);
   const goal = Number(profile?.monthly_goal_kg ?? 0);
-  const goalProgress = goal > 0 ? Math.min(100, (totalMonth / goal) * 100) : 0;
-  const goalOnTrack = goal > 0 ? fc.projected <= goal : false;
+
+  // Pull AI quick-win savings (cached) to feed the "improved projection"
+  const fetchInsights = useServerFn(getAiInsights);
+  const { data: ai } = useQuery({
+    queryKey: ["ai-insights"],
+    queryFn: () => fetchInsights(),
+    staleTime: 1000 * 60 * 30,
+    enabled: activities.length >= 3,
+  });
+  const potentialSavings = useMemo(
+    () => (ai?.quickWins ?? []).reduce((s, q) => s + (Number(q.savings_kg) || 0), 0),
+    [ai],
+  );
+
+  const fc = useMemo(
+    () => forecast(activities, profile?.monthly_goal_kg, potentialSavings),
+    [activities, profile?.monthly_goal_kg, potentialSavings],
+  );
+  const goalProgress = goal > 0 ? Math.min(100, (fc.current / goal) * 100) : 0;
+  const goalOnTrack = goal > 0 && !fc.insufficientData ? fc.projected <= goal : false;
+
+  // Visualization: cap bar widths relative to the max of goal/projection
+  const maxBar = Math.max(fc.goal, fc.projected, fc.improvedProjection, 1);
+  const barPct = (v: number) => Math.max(2, Math.round((v / maxBar) * 100));
+
 
   return (
     <AppShell>
